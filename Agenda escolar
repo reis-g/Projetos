@@ -1,0 +1,455 @@
+import sqlite3
+import tkinter as tk
+from tkinter import ttk, messagebox, simpledialog
+from datetime import datetime
+
+# Configuração do banco de dados SQLite
+def configurar_banco_de_dados():
+    conn = sqlite3.connect('agenda_escolar.db')
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS usuarios (
+            cpf TEXT PRIMARY KEY,
+            nome TEXT,
+            senha TEXT,
+            tipo TEXT
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS turmas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS alunos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT,
+            turma_id INTEGER,
+            FOREIGN KEY (turma_id) REFERENCES turmas (id)
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS registros_diarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            aluno_id INTEGER,
+            data TEXT,
+            brincou INTEGER,
+            fez_xixi INTEGER,
+            fez_coco INTEGER,
+            comeu_lanche INTEGER,
+            comeu_almoco INTEGER,
+            comeu_janta INTEGER,
+            mensagem TEXT,
+            FOREIGN KEY (aluno_id) REFERENCES alunos (id)
+        )
+    ''')
+
+    conn.commit()
+    conn.close()
+
+# Função para conectar ao banco de dados
+def conectar():
+    return sqlite3.connect('agenda_escolar.db')
+
+# Função para adicionar um usuário ao banco de dados
+def adicionar_usuario(cpf, nome, senha, tipo):
+    conn = conectar()
+    cursor = conn.cursor()
+    cursor.execute('INSERT INTO usuarios (cpf, nome, senha, tipo) VALUES (?, ?, ?, ?)', (cpf, nome, senha, tipo))
+    conn.commit()
+    conn.close()
+
+# Função para autenticar usuário
+def autenticar_usuario(root):
+    cpf = simpledialog.askstring("Login", "Digite seu CPF (somente números):", parent=root)
+    if cpf:
+        senha = simpledialog.askstring("Login", f"CPF: {cpf}\nDigite sua senha:", show='*', parent=root)
+        conn = conectar()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM usuarios WHERE cpf = ? AND senha = ?', (cpf, senha))
+        usuario = cursor.fetchone()
+        conn.close()
+
+        if usuario:
+            messagebox.showinfo("Login", f"Bem-vindo, {usuario[1]}!", parent=root)
+            return usuario[3], {'cpf': usuario[0], 'nome': usuario[1], 'senha': usuario[2]}
+        else:
+            messagebox.showerror("Erro", "CPF ou senha incorretos.", parent=root)
+            return None, None
+    else:
+        messagebox.showerror("Erro", "CPF inválido. Digite 11 números.", parent=root)
+        return None, None
+
+# Função para configurar o estilo da interface
+def configurar_estilos():
+    estilo = ttk.Style()
+    estilo.theme_use('clam')
+
+    estilo.configure('TButton',
+                     padding=6,
+                     relief="flat",
+                     background="#4CAF50",
+                     foreground="white",
+                     font=('Arial', 12, 'bold'))
+
+    estilo.configure('TLabel',
+                     font=('Arial', 12),
+                     background="#F0F0F0",
+                     foreground="#333333")
+
+# Classes de Usuário
+class Usuario:
+    def __init__(self, cpf, nome, senha):
+        self.cpf = cpf
+        self.nome = nome
+        self.senha = senha
+
+class Professor(Usuario):
+    def __init__(self, cpf, nome, senha, turma_id):
+        super().__init__(cpf, nome, senha)
+        self.turma_id = turma_id
+
+    def tela_inicial(self, root):
+        root.title(f"Professor - {self.nome}")
+        root.geometry("400x300")
+
+        lbl = ttk.Label(root, text=f"Bem-vindo, Professor {self.nome}")
+        lbl.pack(pady=10)
+
+        btn_preencher = ttk.Button(root, text="Preencher Registro Diário", command=self.selecionar_aluno_para_preencher)
+        btn_preencher.pack(pady=5)
+
+        btn_consultar = ttk.Button(root, text="Consultar Registros", command=self.selecionar_aluno_para_consultar)
+        btn_consultar.pack(pady=5)
+
+        btn_sair = ttk.Button(root, text="Sair", command=lambda: voltar_para_login(root))
+        btn_sair.pack(pady=5)
+
+    def selecionar_aluno_para_preencher(self):
+        conn = conectar()
+        cursor = conn.cursor()
+        cursor.execute('SELECT id, nome FROM alunos WHERE turma_id = ?', (self.turma_id,))
+        alunos = cursor.fetchall()
+        conn.close()
+
+        alunos_nomes = [aluno[1] for aluno in alunos]
+
+        def preencher_callback():
+            aluno_selecionado = aluno_var.get()
+            aluno_id = None
+            for aluno in alunos:
+                if aluno[1] == aluno_selecionado:
+                    aluno_id = aluno[0]
+                    break
+
+            if aluno_id is not None:
+                registro = RegistroDiario(aluno_id)
+                registro.preencher()
+                conn = conectar()
+                cursor = conn.cursor()
+                cursor.execute('INSERT INTO registros_diarios (aluno_id, data, brincou, fez_xixi, fez_coco, comeu_lanche, comeu_almoco, comeu_janta, mensagem) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                               (aluno_id, registro.data, registro.brincou, registro.fez_xixi, registro.fez_coco, registro.comeu_lanche, registro.comeu_almoco, registro.comeu_janta, registro.mensagem))
+                conn.commit()
+                conn.close()
+                messagebox.showinfo("Sucesso", f"Registro diário preenchido para {aluno_selecionado}.")
+                janela_selecao.destroy()
+            else:
+                messagebox.showerror("Erro", "Aluno não encontrado.")
+
+        janela_selecao = tk.Toplevel()
+        janela_selecao.title("Selecionar Aluno")
+
+        ttk.Label(janela_selecao, text="Escolha um aluno para preencher o registro:").pack(pady=10)
+        
+        aluno_var = tk.StringVar(janela_selecao)
+        aluno_var.set(alunos_nomes[0])
+
+        dropdown = ttk.OptionMenu(janela_selecao, aluno_var, *alunos_nomes)
+        dropdown.pack(pady=10)
+
+        btn_selecionar = ttk.Button(janela_selecao, text="Selecionar", command=preencher_callback)
+        btn_selecionar.pack(pady=10)
+
+    def selecionar_aluno_para_consultar(self):
+        conn = conectar()
+        cursor = conn.cursor()
+        cursor.execute('SELECT id, nome FROM alunos WHERE turma_id = ?', (self.turma_id,))
+        alunos = cursor.fetchall()
+        conn.close()
+
+        alunos_nomes = [aluno[1] for aluno in alunos]
+
+        def consultar_callback():
+            aluno_selecionado = aluno_var.get()
+            aluno_id = None
+            for aluno in alunos:
+                if aluno[1] == aluno_selecionado:
+                    aluno_id = aluno[0]
+                    break
+
+            if aluno_id is not None:
+                conn = conectar()
+                cursor = conn.cursor()
+                cursor.execute('SELECT * FROM registros_diarios WHERE aluno_id = ?', (aluno_id,))
+                registros = cursor.fetchall()
+                conn.close()
+
+                if registros:
+                    registros_str = "\n".join([
+                        f"Data: {reg[2]}, Brincou: {bool(reg[3])}, Fez xixi: {bool(reg[4])}, Fez cocô: {bool(reg[5])}, "
+                        f"Comeu lanche: {bool(reg[6])}, Almoço: {bool(reg[7])}, Janta: {bool(reg[8])}, Mensagem: {reg[9]}"
+                        for reg in registros
+                    ])
+                    messagebox.showinfo(f"Registros de {aluno_selecionado}", registros_str)
+                else:
+                    messagebox.showinfo("Consulta", "Nenhum registro encontrado.")
+            else:
+                messagebox.showerror("Erro", "Aluno não encontrado.")
+            janela_selecao.destroy()
+
+        janela_selecao = tk.Toplevel()
+        janela_selecao.title("Selecionar Aluno")
+
+        ttk.Label(janela_selecao, text="Escolha um aluno para consultar os registros:").pack(pady=10)
+        
+        aluno_var = tk.StringVar(janela_selecao)
+        aluno_var.set(alunos_nomes[0])
+
+        dropdown = ttk.OptionMenu(janela_selecao, aluno_var, *alunos_nomes)
+        dropdown.pack(pady=10)
+
+        btn_selecionar = ttk.Button(janela_selecao, text="Selecionar", command=consultar_callback)
+        btn_selecionar.pack(pady=10)
+
+class Pais(Usuario):
+    def __init__(self, cpf, nome, senha, alunos_ids):
+        super().__init__(cpf, nome, senha)
+        self.alunos_ids = alunos_ids
+
+    def tela_inicial(self, root):
+        root.title(f"Pais - {self.nome}")
+        root.geometry("400x300")
+
+        lbl = ttk.Label(root, text=f"Bem-vindo, {self.nome}")
+        lbl.pack(pady=10)
+
+        btn_ver_registros = ttk.Button(root, text="Ver Registros dos Filhos", command=self.selecionar_aluno_para_consultar)
+        btn_ver_registros.pack(pady=5)
+
+        btn_sair = ttk.Button(root, text="Sair", command=lambda: voltar_para_login(root))
+        btn_sair.pack(pady=5)
+
+    def selecionar_aluno_para_consultar(self):
+        conn = conectar()
+        cursor = conn.cursor()
+        cursor.execute('SELECT id, nome FROM alunos WHERE id IN ({})'.format(','.join('?' * len(self.alunos_ids))), self.alunos_ids)
+        alunos = cursor.fetchall()
+        conn.close()
+
+        alunos_nomes = [aluno[1] for aluno in alunos]
+
+        def consultar_callback():
+            aluno_selecionado = aluno_var.get()
+            aluno_id = None
+            for aluno in alunos:
+                if aluno[1] == aluno_selecionado:
+                    aluno_id = aluno[0]
+                    break
+
+            if aluno_id is not None:
+                conn = conectar()
+                cursor = conn.cursor()
+                cursor.execute('SELECT * FROM registros_diarios WHERE aluno_id = ?', (aluno_id,))
+                registros = cursor.fetchall()
+                conn.close()
+
+                if registros:
+                    registros_str = "\n".join([
+                        f"Data: {reg[2]}, Brincou: {bool(reg[3])}, Fez xixi: {bool(reg[4])}, Fez cocô: {bool(reg[5])}, "
+                        f"Comeu lanche: {bool(reg[6])}, Almoço: {bool(reg[7])}, Janta: {bool(reg[8])}, Mensagem: {reg[9]}"
+                        for reg in registros
+                    ])
+                    messagebox.showinfo(f"Registros de {aluno_selecionado}", registros_str)
+                else:
+                    messagebox.showinfo("Consulta", "Nenhum registro encontrado.")
+            else:
+                messagebox.showerror("Erro", "Aluno não encontrado.")
+            janela_selecao.destroy()
+
+        janela_selecao = tk.Toplevel()
+        janela_selecao.title("Selecionar Aluno")
+
+        ttk.Label(janela_selecao, text="Escolha um aluno para consultar os registros:").pack(pady=10)
+
+        aluno_var = tk.StringVar(janela_selecao)
+        aluno_var.set(alunos_nomes[0])
+
+        dropdown = ttk.OptionMenu(janela_selecao, aluno_var, *alunos_nomes)
+        dropdown.pack(pady=10)
+
+        btn_selecionar = ttk.Button(janela_selecao, text="Selecionar", command=consultar_callback)
+        btn_selecionar.pack(pady=10)
+
+class Direcao(Usuario):
+    def __init__(self, cpf, nome, senha):
+        super().__init__(cpf, nome, senha)
+
+    def tela_inicial(self, root):
+        root.title(f"Direção - {self.nome}")
+        root.geometry("400x300")
+
+        lbl = ttk.Label(root, text=f"Bem-vindo, Diretor {self.nome}")
+        lbl.pack(pady=10)
+
+        btn_cadastrar_usuario = ttk.Button(root, text="Cadastrar Usuário", command=self.cadastrar_usuario)
+        btn_cadastrar_usuario.pack(pady=5)
+
+        btn_alterar_usuario = ttk.Button(root, text="Alterar Usuário", command=self.alterar_usuario)
+        btn_alterar_usuario.pack(pady=5)
+
+        btn_enviar_mensagem = ttk.Button(root, text="Enviar Mensagem", command=self.enviar_mensagem)
+        btn_enviar_mensagem.pack(pady=5)
+
+        btn_sair = ttk.Button(root, text="Sair", command=lambda: voltar_para_login(root))
+        btn_sair.pack(pady=5)
+
+    def cadastrar_usuario(self):
+        tipo_usuario = simpledialog.askstring("Cadastro", "Digite o tipo de usuário (professor, pais, direcao):").lower()
+        cpf = simpledialog.askstring("Cadastro", "Digite o CPF do usuário (somente números):")
+        if not cpf or len(cpf) != 11 or not cpf.isdigit():
+            messagebox.showerror("Erro", "CPF inválido! Deve conter 11 números.")
+            return
+
+        cpf_formatado = formatar_cpf(cpf)
+        nome = simpledialog.askstring("Cadastro", f"Digite o nome do usuário (CPF: {cpf_formatado}):")
+        senha = simpledialog.askstring("Cadastro", "Digite a senha do usuário:", show='*')
+
+        conn = conectar()
+        cursor = conn.cursor()
+
+        if tipo_usuario == 'professor':
+            turma_nome = simpledialog.askstring("Cadastro", "Digite o nome da turma:")
+            cursor.execute('SELECT id FROM turmas WHERE nome = ?', (turma_nome,))
+            turma = cursor.fetchone()
+            if not turma:
+                cursor.execute('INSERT INTO turmas (nome) VALUES (?)', (turma_nome,))
+                cursor.execute('SELECT id FROM turmas WHERE nome = ?', (turma_nome,))
+                turma = cursor.fetchone()
+            turma_id = turma[0]
+            cursor.execute('INSERT INTO usuarios (cpf, nome, senha, tipo) VALUES (?, ?, ?, ?)', (cpf, nome, senha, tipo_usuario))
+            conn.commit()
+            conn.close()
+        elif tipo_usuario == 'pais':
+            cursor.execute('INSERT INTO usuarios (cpf, nome, senha, tipo) VALUES (?, ?, ?, ?)', (cpf, nome, senha, tipo_usuario))
+            conn.commit()
+            conn.close()
+        elif tipo_usuario == 'direcao':
+            cursor.execute('INSERT INTO usuarios (cpf, nome, senha, tipo) VALUES (?, ?, ?, ?)', (cpf, nome, senha, tipo_usuario))
+            conn.commit()
+            conn.close()
+        else:
+            messagebox.showerror("Erro", "Tipo de usuário inválido!")
+            conn.close()
+            return
+
+        messagebox.showinfo("Sucesso", f"Usuário {nome} (CPF: {cpf_formatado}) cadastrado com sucesso!")
+
+    def alterar_usuario(self):
+        cpf = simpledialog.askstring("Alterar Usuário", "Digite o CPF do usuário a ser alterado (somente números):")
+        if not cpf or len(cpf) != 11 or not cpf.isdigit():
+            messagebox.showerror("Erro", "CPF inválido! Deve conter 11 números.")
+            return
+
+        cpf_formatado = formatar_cpf(cpf)
+        conn = conectar()
+        cursor = conn.cursor()
+
+        cursor.execute('SELECT * FROM usuarios WHERE cpf = ?', (cpf,))
+        usuario = cursor.fetchone()
+        if usuario:
+            novo_nome = simpledialog.askstring("Alterar", f"Nome atual: {usuario[1]}. Digite o novo nome (ou deixe em branco para manter):")
+            nova_senha = simpledialog.askstring("Alterar", "Digite a nova senha (ou deixe em branco para manter):", show='*')
+
+            if novo_nome:
+                cursor.execute('UPDATE usuarios SET nome = ? WHERE cpf = ?', (novo_nome, cpf))
+            if nova_senha:
+                cursor.execute('UPDATE usuarios SET senha = ? WHERE cpf = ?', (nova_senha, cpf))
+
+            conn.commit()
+            messagebox.showinfo("Sucesso", f"Usuário alterado com sucesso! (CPF: {cpf_formatado})")
+        else:
+            messagebox.showerror("Erro", "Usuário não encontrado!")
+        conn.close()
+
+    def enviar_mensagem(self):
+        messagebox.showinfo("Envio de Mensagem", "Função de envio de mensagens será implementada.")
+
+# Classe RegistroDiario
+class RegistroDiario:
+    def __init__(self, aluno_id, brincou=False, fez_xixi=False, fez_coco=False, comeu_lanche=False, comeu_almoco=False, comeu_janta=False, mensagem=""):
+        self.aluno_id = aluno_id
+        self.data = datetime.now().strftime('%Y-%m-%d')
+        self.brincou = brincou
+        self.fez_xixi = fez_xixi
+        self.fez_coco = fez_coco
+        self.comeu_lanche = comeu_lanche
+        self.comeu_almoco = comeu_almoco
+        self.comeu_janta = comeu_janta
+        self.mensagem = mensagem
+
+    def preencher(self):
+        self.brincou = messagebox.askyesno("Registro Diário", "A criança brincou?")
+        self.fez_xixi = messagebox.askyesno("Registro Diário", "A criança fez xixi?")
+        self.fez_coco = messagebox.askyesno("Registro Diário", "A criança fez cocô?")
+        self.comeu_lanche = messagebox.askyesno("Registro Diário", "A criança comeu no lanche?")
+        self.comeu_almoco = messagebox.askyesno("Registro Diário", "A criança comeu no almoço?")
+        self.comeu_janta = messagebox.askyesno("Registro Diário", "A criança comeu na janta?")
+        self.mensagem = simpledialog.askstring("Mensagem", "Digite uma mensagem sobre a criança:")
+
+# Função principal
+def menu_principal():
+    configurar_banco_de_dados()  # Configura o banco de dados na primeira execução
+
+    root = tk.Tk()
+    root.title("Agenda Escolar")
+    root.geometry("400x300")
+
+    configurar_estilos()
+
+    lbl = ttk.Label(root, text="Bem-vindo ao Sistema de Agenda Escolar")
+    lbl.pack(pady=20)
+
+    btn_login = ttk.Button(root, text="Login", command=lambda: iniciar_sistema(root))
+    btn_login.pack(pady=10)
+
+    root.mainloop()
+
+def iniciar_sistema(root):
+    tipo_usuario, usuario_data = autenticar_usuario(root)
+    if tipo_usuario == 'professores':
+        conn = conectar()
+        cursor = conn.cursor()
+        cursor.execute('SELECT turma_id FROM usuarios WHERE cpf = ?', (usuario_data['cpf'],))
+        turma_id = cursor.fetchone()[0]
+        conn.close()
+        professor = Professor(usuario_data['cpf'], usuario_data['nome'], usuario_data['senha'], turma_id)
+        professor.tela_inicial(root)
+    elif tipo_usuario == 'pais':
+        conn = conectar()
+        cursor = conn.cursor()
+        cursor.execute('SELECT id FROM alunos WHERE id IN (SELECT aluno_id FROM pais_alunos WHERE cpf_pais = ?)', (usuario_data['cpf'],))
+        alunos_ids = [aluno[0] for aluno in cursor.fetchall()]
+        conn.close()
+        pais = Pais(usuario_data['cpf'], usuario_data['nome'], usuario_data['senha'], alunos_ids)
+        pais.tela_inicial(root)
+    elif tipo_usuario == 'direcoes':
+        direcao = Direcao(usuario_data['cpf'], usuario_data['nome'], usuario_data['senha'])
+        direcao.tela_inicial(root)
+
+if __name__ == "__main__":
+    menu_principal()
