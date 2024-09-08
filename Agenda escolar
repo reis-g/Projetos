@@ -204,33 +204,33 @@ class Professor(Usuario):
         cursor.execute('SELECT id FROM alunos WHERE nome = ?', (aluno_selecionado,))
         aluno = cursor.fetchone()
     
-    if aluno:
-        aluno_id = aluno[0]  # Pega o ID do aluno
+        if aluno:
+            aluno_id = aluno[0]  # Pega o ID do aluno
 
-        # Buscar os registros diários do aluno
-        cursor.execute('SELECT * FROM registros_diarios WHERE aluno_id = ?', (aluno_id,))
-        registros = cursor.fetchall()  # Busca todos os registros
-        conn.close()
+            # Buscar os registros diários do aluno
+            cursor.execute('SELECT * FROM registros_diarios WHERE aluno_id = ?', (aluno_id,))
+            registros = cursor.fetchall()  # Busca todos os registros
+            conn.close()
 
-        if registros:
-            # Exibe os registros em uma nova janela
-            janela_registros = tk.Toplevel()
-            janela_registros.title(f"Registros de {aluno_selecionado}")
+            if registros:
+                # Exibe os registros em uma nova janela
+                janela_registros = tk.Toplevel()
+                janela_registros.title(f"Registros de {aluno_selecionado}")
 
-            for reg in registros:
-                registro_str = f"Data: {reg[2]}\nBrincou: {'Sim' if reg[3] else 'Não'}\n" \
-                               f"Fez xixi: {'Sim' if reg[4] else 'Não'}\n" \
-                               f"Fez cocô: {'Sim' if reg[5] else 'Não'}\n" \
-                               f"Comeu lanche: {'Sim' if reg[6] else 'Não'}\n" \
-                               f"Almoço: {'Sim' if reg[7] else 'Não'}\n" \
-                               f"Janta: {'Sim' if reg[8] else 'Não'}\n" \
-                               f"Mensagem: {reg[9]}\n"
+                for reg in registros:
+                    registro_str = f"Data: {reg[2]}\nBrincou: {'Sim' if reg[3] else 'Não'}\n" \
+                                   f"Fez xixi: {'Sim' if reg[4] else 'Não'}\n" \
+                                   f"Fez cocô: {'Sim' if reg[5] else 'Não'}\n" \
+                                   f"Comeu lanche: {'Sim' if reg[6] else 'Não'}\n" \
+                                   f"Almoço: {'Sim' if reg[7] else 'Não'}\n" \
+                                   f"Janta: {'Sim' if reg[8] else 'Não'}\n" \
+                                   f"Mensagem: {reg[9]}\n"
                 
-                tk.Label(janela_registros, text=registro_str).pack(pady=5)
+                    tk.Label(janela_registros, text=registro_str).pack(pady=5)
+            else:
+                messagebox.showinfo("Consulta", "Nenhum registro encontrado para este aluno.")
         else:
-            messagebox.showinfo("Consulta", "Nenhum registro encontrado para este aluno.")
-    else:
-        messagebox.showerror("Erro", "Aluno não encontrado.")
+            messagebox.showerror("Erro", "Aluno não encontrado.")
 
             
 class Pais(Usuario):
