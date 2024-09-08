@@ -8,12 +8,14 @@ def configurar_banco_de_dados():
     conn = sqlite3.connect('agenda_escolar.db')
     cursor = conn.cursor()
 
+    # Criar tabela de usuários com a coluna turma_id para professores
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS usuarios (
             cpf TEXT PRIMARY KEY,
             nome TEXT,
             senha TEXT,
-            tipo TEXT
+            tipo TEXT,
+            turma_id INTEGER
         )
     ''')
 
@@ -48,10 +50,7 @@ def configurar_banco_de_dados():
             FOREIGN KEY (aluno_id) REFERENCES alunos (id)
         )
     ''')
-def configurar_tabela_pais_alunos():
-    conn = conectar()
-    cursor = conn.cursor() 
-    # Criação da tabela pais_alunos com as colunas cpf_pais e aluno_id
+
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS pais_alunos (
             cpf_pais TEXT,
@@ -69,15 +68,7 @@ def configurar_tabela_pais_alunos():
 def conectar():
     return sqlite3.connect('agenda_escolar.db')
 
-# Função para adicionar um usuário ao banco de dados
-def adicionar_usuario(cpf, nome, senha, tipo):
-    conn = conectar()
-    cursor = conn.cursor()
-    cursor.execute('INSERT INTO usuarios (cpf, nome, senha, tipo) VALUES (?, ?, ?, ?)', (cpf, nome, senha, tipo))
-    conn.commit()
-    conn.close()
-
-
+# Função para adicionar usuários de teste
 def adicionar_usuarios_de_teste():
     conn = conectar()
     cursor = conn.cursor()
@@ -88,13 +79,14 @@ def adicionar_usuarios_de_teste():
     turma_id = cursor.fetchone()[0]
 
     # Função auxiliar para verificar e adicionar usuário
-    def adicionar_usuario_se_nao_existir(cpf, nome, senha, tipo):
+    def adicionar_usuario_se_nao_existir(cpf, nome, senha, tipo, turma_id=None):
         cursor.execute('SELECT cpf FROM usuarios WHERE cpf = ?', (cpf,))
         if cursor.fetchone() is None:
-            cursor.execute('INSERT INTO usuarios (cpf, nome, senha, tipo) VALUES (?, ?, ?, ?)', (cpf, nome, senha, tipo))
+            cursor.execute('INSERT INTO usuarios (cpf, nome, senha, tipo, turma_id) VALUES (?, ?, ?, ?, ?)', (cpf, nome, senha, tipo, turma_id))
+            print(f"Usuário {nome} cadastrado com CPF: {cpf} e senha: {senha}")
 
     # Exemplo de cadastro de professor
-    adicionar_usuario_se_nao_existir('11111111111', 'Professor Teste', 'senha123', 'professores')
+    adicionar_usuario_se_nao_existir('11111111111', 'Professor Teste', 'senha123', 'professores', turma_id)
 
     # Exemplo de cadastro de pais
     adicionar_usuario_se_nao_existir('22222222222', 'Pai Teste', 'senha123', 'pais')
@@ -102,65 +94,106 @@ def adicionar_usuarios_de_teste():
     # Exemplo de cadastro de direção
     adicionar_usuario_se_nao_existir('33333333333', 'Diretor Teste', 'senha123', 'direcoes')
 
+    # Cadastro de um aluno vinculado ao pai e à turma
+    cursor.execute('INSERT INTO alunos (nome, turma_id) VALUES (?, ?)', ('Aluno Teste', turma_id))
+    cursor.execute('SELECT id FROM alunos WHERE nome = ?', ('Aluno Teste',))
+    aluno_id = cursor.fetchone()[0]
+
+    # Garantir que o pai está vinculado ao aluno na tabela pais_alunos
+    cursor.execute('SELECT * FROM pais_alunos WHERE cpf_pais = ? AND aluno_id = ?', ('22222222222', aluno_id))
+    if cursor.fetchone() is None:
+        cursor.execute('INSERT INTO pais_alunos (cpf_pais, aluno_id) VALUES (?, ?)', ('22222222222', aluno_id))
+
     conn.commit()
     conn.close()
-
     print("Usuários de teste cadastrados com sucesso!")
 
-
-# Função para autenticar usuário
+# Função para formatar CPF com pontos e traço
 def formatar_cpf(cpf):
-    # Adiciona pontos e traço enquanto o usuário digita
     if len(cpf) == 3 or len(cpf) == 7:
         cpf += '.'
     elif len(cpf) == 11:
         cpf += '-'
     return cpf
 
+# Função para autenticar usuário
 def autenticar_usuario(root):
     cpf = ""
-    while len(cpf) != 14:  # CPF formatado tem 14 caracteres com pontos e traço
-        cpf = simpledialog.askstring("Login", "Digite seu CPF:", parent=root)
+    while True:  # Permitir várias tentativas
+        cpf = simpledialog.askstring("Login", "Digite seu CPF (somente números):", parent=root)
         if cpf:
-            cpf = formatar_cpf(cpf)
-            senha = simpledialog.askstring("Login", f"CPF: {cpf}\nDigite sua senha:", show='*', parent=root)
-            
-            # Remover formatação do CPF (pontos e traço) para comparação
+            # Remover formatação do CPF (pontos e traços)
             cpf_formatado = cpf.replace('.', '').replace('-', '')
-            
+
+            # Verificação de CPF válido (11 dígitos)
+            if len(cpf_formatado) != 11 or not cpf_formatado.isdigit():
+                messagebox.showerror("Erro", "CPF inválido. Digite 11 números.", parent=root)
+                continue  # Voltar a pedir o CPF
+
+            # Solicitar a senha
+            senha = simpledialog.askstring("Login", f"CPF: {cpf}\nDigite sua senha:", show='*', parent=root)
+
+            # Conectar ao banco de dados
             conn = conectar()
             cursor = conn.cursor()
-            
-            # Verifica se o usuário existe e pega a senha
-            cursor.execute('SELECT senha FROM usuarios WHERE cpf = ?', (cpf_formatado,))
+
+            # Buscar o usuário pelo CPF
+            cursor.execute('SELECT nome, senha, tipo FROM usuarios WHERE cpf = ?', (cpf_formatado,))
             resultado = cursor.fetchone()
             conn.close()
-            
+
             if resultado:
-                senha_armazenada = resultado[0]  # Senha armazenada no banco de dados
-                
-                # Verifica se a senha está correta
+                nome_usuario, senha_armazenada, tipo_usuario = resultado
+                print(f"CPF: {cpf_formatado}, Senha Armazenada: {senha_armazenada}")
+
+                # Comparar a senha digitada com a senha armazenada
                 if senha == senha_armazenada:
-                    messagebox.showinfo("Login", f"Bem-vindo, {cpf_formatado}!", parent=root)
-                    return True
+                    messagebox.showinfo("Login", f"Bem-vindo, {nome_usuario}!", parent=root)
+                    return tipo_usuario, {'cpf': cpf_formatado, 'nome': nome_usuario, 'senha': senha_armazenada}
                 else:
                     messagebox.showerror("Erro", "Senha incorreta. Tente novamente.", parent=root)
             else:
                 messagebox.showerror("Erro", "Usuário não encontrado.", parent=root)
         else:
-            messagebox.showerror("Erro", "CPF inválido.", parent=root)
+            messagebox.showerror("Erro", "CPF inválido. Digite 11 números.", parent=root)
             return None, None
 
-
-# Função para sair
+# Função para voltar à tela de login
 def voltar_para_login(root):
-    # Remove todos os widgets da tela atual
     for widget in root.winfo_children():
-        widget.destroy()
+        widget.destroy()  # Remove todos os widgets da janela atual
+    iniciar_sistema(root)  # Volta para a tela de login
 
-    # Reinicia o sistema, voltando para a tela de login
-    iniciar_sistema(root)
+# Função principal para iniciar o sistema
+def iniciar_sistema(root):
+    tipo_usuario, usuario_data = autenticar_usuario(root)
+    
+    if tipo_usuario == 'professores':
+        conn = conectar()
+        cursor = conn.cursor()
+        cursor.execute('SELECT turma_id FROM usuarios WHERE cpf = ?', (usuario_data['cpf'],))
+        turma_id = cursor.fetchone()[0]
+        conn.close()
+        professor = Professor(usuario_data['cpf'], usuario_data['nome'], usuario_data['senha'], turma_id)
+        professor.tela_inicial(root)
 
+    elif tipo_usuario == 'pais':
+        conn = conectar()
+        cursor = conn.cursor()
+        # Buscar alunos associados ao CPF do pai
+        cursor.execute('SELECT id FROM alunos WHERE id IN (SELECT aluno_id FROM pais_alunos WHERE cpf_pais = ?)', (usuario_data['cpf'],))
+        alunos_ids = [aluno[0] for aluno in cursor.fetchall()]
+        conn.close()
+
+        if alunos_ids:
+            pais = Pais(usuario_data['cpf'], usuario_data['nome'], usuario_data['senha'], alunos_ids)
+            pais.tela_inicial(root)
+        else:
+            messagebox.showerror("Erro", "Nenhum aluno associado a este pai.", parent=root)
+
+    elif tipo_usuario == 'direcoes':
+        direcao = Direcao(usuario_data['cpf'], usuario_data['nome'], usuario_data['senha'])
+        direcao.tela_inicial(root)
 
 # Função para configurar o estilo da interface
 def configurar_estilos():
@@ -178,6 +211,9 @@ def configurar_estilos():
                      font=('Arial', 12),
                      background="#F0F0F0",
                      foreground="#333333")
+
+
+
 def menu_principal():
     configurar_banco_de_dados()  # Configura o banco de dados na primeira execução
     configurar_tabela_pais_alunos()  # Configura a tabela de pais e alunos
