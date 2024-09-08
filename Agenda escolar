@@ -3,12 +3,12 @@ import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 from datetime import datetime
 
-# Configuração do banco de dados SQLite
+
 def configurar_banco_de_dados():
     conn = sqlite3.connect('agenda_escolar.db')
     cursor = conn.cursor()
 
-    # Criar tabela de usuários com a coluna turma_id para professores
+   
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS usuarios (
             cpf TEXT PRIMARY KEY,
@@ -64,42 +64,42 @@ def configurar_banco_de_dados():
     conn.commit()
     conn.close()
 
-# Função para conectar ao banco de dados
+
 def conectar():
     return sqlite3.connect('agenda_escolar.db')
 
-# Função para adicionar usuários de teste
+
 def adicionar_usuarios_de_teste():
     conn = conectar()
     cursor = conn.cursor()
 
-    # Exemplo de cadastro de uma turma
+  
     cursor.execute('INSERT INTO turmas (nome) VALUES (?)', ('Turma 1',))
     cursor.execute('SELECT id FROM turmas WHERE nome = ?', ('Turma 1',))
     turma_id = cursor.fetchone()[0]
 
-    # Função auxiliar para verificar e adicionar usuário
+    
     def adicionar_usuario_se_nao_existir(cpf, nome, senha, tipo, turma_id=None):
         cursor.execute('SELECT cpf FROM usuarios WHERE cpf = ?', (cpf,))
         if cursor.fetchone() is None:
             cursor.execute('INSERT INTO usuarios (cpf, nome, senha, tipo, turma_id) VALUES (?, ?, ?, ?, ?)', (cpf, nome, senha, tipo, turma_id))
             print(f"Usuário {nome} cadastrado com CPF: {cpf} e senha: {senha}")
 
-    # Exemplo de cadastro de professor
+   
     adicionar_usuario_se_nao_existir('11111111111', 'Professor Teste', 'senha123', 'professores', turma_id)
 
-    # Exemplo de cadastro de pais
+    
     adicionar_usuario_se_nao_existir('22222222222', 'Pai Teste', 'senha123', 'pais')
 
-    # Exemplo de cadastro de direção
+    
     adicionar_usuario_se_nao_existir('33333333333', 'Diretor Teste', 'senha123', 'direcoes')
 
-    # Cadastro de um aluno vinculado ao pai e à turma
+    
     cursor.execute('INSERT INTO alunos (nome, turma_id) VALUES (?, ?)', ('Aluno Teste', turma_id))
     cursor.execute('SELECT id FROM alunos WHERE nome = ?', ('Aluno Teste',))
     aluno_id = cursor.fetchone()[0]
 
-    # Garantir que o pai está vinculado ao aluno na tabela pais_alunos
+    
     cursor.execute('SELECT * FROM pais_alunos WHERE cpf_pais = ? AND aluno_id = ?', ('22222222222', aluno_id))
     if cursor.fetchone() is None:
         cursor.execute('INSERT INTO pais_alunos (cpf_pais, aluno_id) VALUES (?, ?)', ('22222222222', aluno_id))
@@ -108,7 +108,7 @@ def adicionar_usuarios_de_teste():
     conn.close()
     print("Usuários de teste cadastrados com sucesso!")
 
-# Função para formatar CPF com pontos e traço
+
 def formatar_cpf(cpf):
     if len(cpf) == 3 or len(cpf) == 7:
         cpf += '.'
@@ -116,28 +116,28 @@ def formatar_cpf(cpf):
         cpf += '-'
     return cpf
 
-# Função para autenticar usuário
+
 def autenticar_usuario(root):
     cpf = ""
-    while True:  # Permitir várias tentativas
+    while True:  
         cpf = simpledialog.askstring("Login", "Digite seu CPF (somente números):", parent=root)
         if cpf:
-            # Remover formatação do CPF (pontos e traços)
+            
             cpf_formatado = cpf.replace('.', '').replace('-', '')
 
-            # Verificação de CPF válido (11 dígitos)
+           
             if len(cpf_formatado) != 11 or not cpf_formatado.isdigit():
                 messagebox.showerror("Erro", "CPF inválido. Digite 11 números.", parent=root)
                 continue  # Voltar a pedir o CPF
 
-            # Solicitar a senha
+            
             senha = simpledialog.askstring("Login", f"CPF: {cpf}\nDigite sua senha:", show='*', parent=root)
 
-            # Conectar ao banco de dados
+            
             conn = conectar()
             cursor = conn.cursor()
 
-            # Buscar o usuário pelo CPF
+            
             cursor.execute('SELECT nome, senha, tipo FROM usuarios WHERE cpf = ?', (cpf_formatado,))
             resultado = cursor.fetchone()
             conn.close()
@@ -146,7 +146,7 @@ def autenticar_usuario(root):
                 nome_usuario, senha_armazenada, tipo_usuario = resultado
                 print(f"CPF: {cpf_formatado}, Senha Armazenada: {senha_armazenada}")
 
-                # Comparar a senha digitada com a senha armazenada
+               
                 if senha == senha_armazenada:
                     messagebox.showinfo("Login", f"Bem-vindo, {nome_usuario}!", parent=root)
                     return tipo_usuario, {'cpf': cpf_formatado, 'nome': nome_usuario, 'senha': senha_armazenada}
@@ -158,13 +158,13 @@ def autenticar_usuario(root):
             messagebox.showerror("Erro", "CPF inválido. Digite 11 números.", parent=root)
             return None, None
 
-# Função para voltar à tela de login
+
 def voltar_para_login(root):
     for widget in root.winfo_children():
-        widget.destroy()  # Remove todos os widgets da janela atual
-    iniciar_sistema(root)  # Volta para a tela de login
+        widget.destroy()  
+    iniciar_sistema(root)  
 
-# Função principal para iniciar o sistema
+
 def iniciar_sistema(root):
     tipo_usuario, usuario_data = autenticar_usuario(root)
     
@@ -195,7 +195,7 @@ def iniciar_sistema(root):
         direcao = Direcao(usuario_data['cpf'], usuario_data['nome'], usuario_data['senha'])
         direcao.tela_inicial(root)
 
-# Função para configurar o estilo da interface
+
 def configurar_estilos():
     estilo = ttk.Style()
     estilo.theme_use('clam')
@@ -215,8 +215,8 @@ def configurar_estilos():
 
 
 def menu_principal():
-    configurar_banco_de_dados()  # Configura o banco de dados na primeira execução
-    configurar_tabela_pais_alunos()  # Configura a tabela de pais e alunos
+    configurar_banco_de_dados()  
+    configurar_tabela_pais_alunos()  
 
     root = tk.Tk()
     root.title("Agenda Escolar")
@@ -232,7 +232,7 @@ def menu_principal():
 
     root.mainloop()
 
-# Classes de Usuário
+
 class Usuario:
     def __init__(self, cpf, nome, senha):
         self.cpf = cpf
@@ -315,20 +315,20 @@ class Professor(Usuario):
         alunos_nomes = [aluno[1] for aluno in alunos]
 
 def consultar_callback():
-    aluno_selecionado = aluno_var.get()  # Obtém o nome do aluno selecionado
+    aluno_selecionado = aluno_var.get() 
     conn = conectar()
     cursor = conn.cursor()
 
-    # Buscar o ID do aluno pelo nome
+   
     cursor.execute('SELECT id FROM alunos WHERE nome = ?', (aluno_selecionado,))
     aluno = cursor.fetchone()
 
     if aluno:  # Verifica se o aluno foi encontrado
         aluno_id = aluno[0]  # Pega o ID do aluno
 
-        # Buscar os registros diários do aluno
+        
         cursor.execute('SELECT * FROM registros_diarios WHERE aluno_id = ?', (aluno_id,))
-        registros = cursor.fetchall()  # Busca todos os registros
+        registros = cursor.fetchall()  
         conn.close()
 
         if registros:
@@ -384,20 +384,20 @@ def consultar_callback():
     conn = conectar()
     cursor = conn.cursor()
 
-    # Buscar o ID do aluno pelo nome
+    
     cursor.execute('SELECT id FROM alunos WHERE nome = ?', (aluno_selecionado,))
     aluno = cursor.fetchone()
 
     if aluno:  # Verifica se o aluno foi encontrado
         aluno_id = aluno[0]  # Pega o ID do aluno
 
-        # Buscar os registros diários do aluno
+        
         cursor.execute('SELECT * FROM registros_diarios WHERE aluno_id = ?', (aluno_id,))
         registros = cursor.fetchall()  # Busca todos os registros
         conn.close()
 
         if registros:
-            # Exibe os registros em uma nova janela
+            
             janela_registros = tk.Toplevel()
             janela_registros.title(f"Registros de {aluno_selecionado}")
 
@@ -533,7 +533,7 @@ class Direcao(Usuario):
             turma = cursor.fetchone()
             if turma:
                 mensagem = simpledialog.askstring("Mensagem", f"Digite a mensagem para a turma {turma_nome}:")
-                # Aqui você enviaria a mensagem para a turma
+                
                 messagebox.showinfo("Mensagem Enviada", f"Mensagem enviada para a turma {turma_nome}.")
             else:
                 messagebox.showerror("Erro", "Turma não encontrada.")
@@ -546,7 +546,7 @@ class Direcao(Usuario):
         enviar_para_turma()
 
 
-# Classe RegistroDiario
+
 class RegistroDiario:
     def __init__(self, aluno_id, brincou=False, fez_xixi=False, fez_coco=False, comeu_lanche=False, comeu_almoco=False, comeu_janta=False, mensagem=""):
         self.aluno_id = aluno_id
@@ -568,9 +568,9 @@ class RegistroDiario:
         self.comeu_janta = messagebox.askyesno("Registro Diário", "A criança comeu na janta?")
         self.mensagem = simpledialog.askstring("Mensagem", "Digite uma mensagem sobre a criança:")
 
-# Função principal
+
 def menu_principal():
-    configurar_banco_de_dados()  # Configura o banco de dados na primeira execução
+    configurar_banco_de_dados()  
 
     root = tk.Tk()
     root.title("Agenda Escolar")
@@ -588,7 +588,8 @@ def menu_principal():
 
 def iniciar_sistema(root):
     tipo_usuario, usuario_data = autenticar_usuario(root)
-    
+    adicionar_usuarios_de_teste():
+
     if tipo_usuario == 'professores':
         conn = conectar()
         cursor = conn.cursor()
@@ -606,7 +607,7 @@ def iniciar_sistema(root):
         alunos_ids = [aluno[0] for aluno in cursor.fetchall()]
         conn.close()
 
-        # Verifique se o pai tem alunos associados
+       
         if alunos_ids:
             pais = Pais(usuario_data['cpf'], usuario_data['nome'], usuario_data['senha'], alunos_ids)
             pais.tela_inicial(root)
