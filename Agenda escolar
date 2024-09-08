@@ -48,6 +48,19 @@ def configurar_banco_de_dados():
             FOREIGN KEY (aluno_id) REFERENCES alunos (id)
         )
     ''')
+def configurar_tabela_pais_alunos():
+    conn = conectar()
+    cursor = conn.cursor() 
+    # Criação da tabela pais_alunos com as colunas cpf_pais e aluno_id
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS pais_alunos (
+            cpf_pais TEXT,
+            aluno_id INTEGER,
+            PRIMARY KEY (cpf_pais, aluno_id),
+            FOREIGN KEY (cpf_pais) REFERENCES usuarios (cpf),
+            FOREIGN KEY (aluno_id) REFERENCES alunos (id)
+        )
+    ''')
 
     conn.commit()
     conn.close()
@@ -95,6 +108,15 @@ def autenticar_usuario(root):
             messagebox.showerror("Erro", "CPF inválido.", parent=root)
             return None, None
 
+# Função para sair
+def voltar_para_login(root):
+    # Remove todos os widgets da tela atual
+    for widget in root.winfo_children():
+        widget.destroy()
+
+    # Reinicia o sistema, voltando para a tela de login
+    iniciar_sistema(root)
+
 
 # Função para configurar o estilo da interface
 def configurar_estilos():
@@ -112,6 +134,23 @@ def configurar_estilos():
                      font=('Arial', 12),
                      background="#F0F0F0",
                      foreground="#333333")
+def menu_principal():
+    configurar_banco_de_dados()  # Configura o banco de dados na primeira execução
+    configurar_tabela_pais_alunos()  # Configura a tabela de pais e alunos
+
+    root = tk.Tk()
+    root.title("Agenda Escolar")
+    root.geometry("400x300")
+
+    configurar_estilos()
+
+    lbl = ttk.Label(root, text="Bem-vindo ao Sistema de Agenda Escolar")
+    lbl.pack(pady=20)
+
+    btn_login = ttk.Button(root, text="Login", command=lambda: iniciar_sistema(root))
+    btn_login.pack(pady=10)
+
+    root.mainloop()
 
 # Classes de Usuário
 class Usuario:
