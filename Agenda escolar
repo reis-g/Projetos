@@ -65,25 +65,36 @@ def adicionar_usuario(cpf, nome, senha, tipo):
     conn.close()
 
 # Função para autenticar usuário
-def autenticar_usuario(root):
-    cpf = simpledialog.askstring("Login", "Digite seu CPF (somente números):", parent=root)
-    if cpf:
-        senha = simpledialog.askstring("Login", f"CPF: {cpf}\nDigite sua senha:", show='*', parent=root)
-        conn = conectar()
-        cursor = conn.cursor()
-        cursor.execute('SELECT * FROM usuarios WHERE cpf = ? AND senha = ?', (cpf, senha))
-        usuario = cursor.fetchone()
-        conn.close()
+def formatar_cpf(cpf):
+    # Adiciona pontos e traço enquanto o usuário digita
+    if len(cpf) == 3 or len(cpf) == 7:
+        cpf += '.'
+    elif len(cpf) == 11:
+        cpf += '-'
+    return cpf
 
-        if usuario:
-            messagebox.showinfo("Login", f"Bem-vindo, {usuario[1]}!", parent=root)
-            return usuario[3], {'cpf': usuario[0], 'nome': usuario[1], 'senha': usuario[2]}
+def autenticar_usuario(root):
+    cpf = ""
+    while len(cpf) != 14:  # CPF formatado tem 14 caracteres com pontos e traço
+        cpf = simpledialog.askstring("Login", "Digite seu CPF:", parent=root)
+        if cpf:
+            cpf = formatar_cpf(cpf)
+            senha = simpledialog.askstring("Login", f"CPF: {cpf}\nDigite sua senha:", show='*', parent=root)
+            conn = conectar()
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM usuarios WHERE cpf = ? AND senha = ?', (cpf.replace('.', '').replace('-', ''), senha))
+            usuario = cursor.fetchone()
+            conn.close()
+
+            if usuario:
+                messagebox.showinfo("Login", f"Bem-vindo, {usuario[1]}!", parent=root)
+                return usuario[3], {'cpf': usuario[0], 'nome': usuario[1], 'senha': usuario[2]}
+            else:
+                messagebox.showerror("Erro", "Senha incorreta. Tente novamente.", parent=root)
         else:
-            messagebox.showerror("Erro", "CPF ou senha incorretos.", parent=root)
+            messagebox.showerror("Erro", "CPF inválido.", parent=root)
             return None, None
-    else:
-        messagebox.showerror("Erro", "CPF inválido. Digite 11 números.", parent=root)
-        return None, None
+
 
 # Função para configurar o estilo da interface
 def configurar_estilos():
@@ -184,13 +195,28 @@ class Professor(Usuario):
 
         alunos_nomes = [aluno[1] for aluno in alunos]
 
-        def consultar_callback():
-            aluno_selecionado = aluno_var.get()
-            aluno_id = None
-            for aluno in alunos:
-                if aluno[1] == aluno_selecionado:
-                    aluno_id = aluno[0]
-                    break
+    def consultar_callback():
+        aluno_selecionado = aluno_var.get()
+        conn = conectar()
+        cursor = conn.cursor()
+        cursor.execute('SELECT id FROM alunos WHERE nome = ?', (aluno_selecionado,))
+        aluno_id = cursor.fetchone()[0]
+        cursor.execute('SELECT * FROM registros_diarios WHERE aluno_id = ?', (aluno_id,))
+        registros = cursor.fetchall()
+        conn.close()
+
+    if registros:
+        janela_registros = tk.Toplevel()
+        janela_registros.title(f"Registros de {aluno_selecionado}")
+
+        for reg in registros:
+            registro_str = f"Data: {reg[2]}\nBrincou: {'Sim' if reg[3] else 'Não'}\nFez xixi: {'Sim' if reg[4] else 'Não'}" \
+                           f"\nFez cocô: {'Sim' if reg[5] else 'Não'}\nComeu lanche: {'Sim' if reg[6] else 'Não'}" \
+                           f"\nAlmoço: {'Sim' if reg[7] else 'Não'}\nJanta: {'Sim' if reg[8] else 'Não'}\nMensagem: {reg[9]}\n"
+            tk.Label(janela_registros, text=registro_str).pack(pady=5)
+    else:
+        messagebox.showinfo("Consulta", "Nenhum registro encontrado.")
+
 
             if aluno_id is not None:
                 conn = conectar()
@@ -253,13 +279,16 @@ class Pais(Usuario):
 
         alunos_nomes = [aluno[1] for aluno in alunos]
 
-        def consultar_callback():
-            aluno_selecionado = aluno_var.get()
-            aluno_id = None
-            for aluno in alunos:
-                if aluno[1] == aluno_selecionado:
-                    aluno_id = aluno[0]
-                    break
+
+    def consultar_callback():
+        aluno_selecionado = aluno_var.get()
+        conn = conectar()
+        cursor = conn.cursor()
+        cursor.execute('SELECT id FROM alunos WHERE nome = ?', (aluno_selecionado,))
+        aluno_id = cursor.fetchone()[0]
+        cursor.execute('SELECT * FROM registros_diarios WHERE aluno_id = ?', (aluno_id,))
+        registros = cursor.fetchall()
+        conn.close()
 
             if aluno_id is not None:
                 conn = conectar()
@@ -317,6 +346,7 @@ class Direcao(Usuario):
 
         btn_sair = ttk.Button(root, text="Sair", command=lambda: voltar_para_login(root))
         btn_sair.pack(pady=5)
+
 
     def cadastrar_usuario(self):
         tipo_usuario = simpledialog.askstring("Cadastro", "Digite o tipo de usuário (professor, pais, direcao):").lower()
@@ -386,8 +416,43 @@ class Direcao(Usuario):
             messagebox.showerror("Erro", "Usuário não encontrado!")
         conn.close()
 
-    def enviar_mensagem(self):
-        messagebox.showinfo("Envio de Mensagem", "Função de envio de mensagens será implementada.")
+  def enviar_mensagem(self):
+    def enviar_para_aluno():
+        aluno_nome = simpledialog.askstring("Enviar Mensagem", "Digite o nome do aluno:")
+        if aluno_nome:
+            conn = conectar()
+            cursor = conn.cursor()
+            cursor.execute('SELECT id FROM alunos WHERE nome = ?', (aluno_nome,))
+            aluno = cursor.fetchone()
+            if aluno:
+                mensagem = simpledialog.askstring("Mensagem", f"Digite a mensagem para {aluno_nome}:")
+                # Aqui você enviaria a mensagem (salvaria no banco de dados, notificaria, etc.)
+                messagebox.showinfo("Mensagem Enviada", f"Mensagem enviada para {aluno_nome}.")
+            else:
+                messagebox.showerror("Erro", "Aluno não encontrado.")
+            conn.close()
+
+    def enviar_para_turma():
+        turma_nome = simpledialog.askstring("Enviar Mensagem", "Digite o nome da turma:")
+        if turma_nome:
+            conn = conectar()
+            cursor = conn.cursor()
+            cursor.execute('SELECT id FROM turmas WHERE nome = ?', (turma_nome,))
+            turma = cursor.fetchone()
+            if turma:
+                mensagem = simpledialog.askstring("Mensagem", f"Digite a mensagem para a turma {turma_nome}:")
+                # Aqui você enviaria a mensagem para a turma
+                messagebox.showinfo("Mensagem Enviada", f"Mensagem enviada para a turma {turma_nome}.")
+            else:
+                messagebox.showerror("Erro", "Turma não encontrada.")
+            conn.close()
+
+    escolha = messagebox.askquestion("Enviar Mensagem", "Enviar mensagem para Aluno ou Turma?", icon='question')
+    if escolha == 'yes':
+        enviar_para_aluno()
+    else:
+        enviar_para_turma()
+
 
 # Classe RegistroDiario
 class RegistroDiario:
