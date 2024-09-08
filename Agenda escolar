@@ -547,6 +547,7 @@ def menu_principal():
 
 def iniciar_sistema(root):
     tipo_usuario, usuario_data = autenticar_usuario(root)
+    
     if tipo_usuario == 'professores':
         conn = conectar()
         cursor = conn.cursor()
@@ -555,17 +556,26 @@ def iniciar_sistema(root):
         conn.close()
         professor = Professor(usuario_data['cpf'], usuario_data['nome'], usuario_data['senha'], turma_id)
         professor.tela_inicial(root)
+
     elif tipo_usuario == 'pais':
         conn = conectar()
         cursor = conn.cursor()
+        # Buscar alunos associados ao CPF do pai
         cursor.execute('SELECT id FROM alunos WHERE id IN (SELECT aluno_id FROM pais_alunos WHERE cpf_pais = ?)', (usuario_data['cpf'],))
         alunos_ids = [aluno[0] for aluno in cursor.fetchall()]
         conn.close()
-        pais = Pais(usuario_data['cpf'], usuario_data['nome'], usuario_data['senha'], alunos_ids)
-        pais.tela_inicial(root)
+
+        # Verifique se o pai tem alunos associados
+        if alunos_ids:
+            pais = Pais(usuario_data['cpf'], usuario_data['nome'], usuario_data['senha'], alunos_ids)
+            pais.tela_inicial(root)
+        else:
+            messagebox.showerror("Erro", "Nenhum aluno associado a este pai.")
+
     elif tipo_usuario == 'direcoes':
         direcao = Direcao(usuario_data['cpf'], usuario_data['nome'], usuario_data['senha'])
         direcao.tela_inicial(root)
+
 
 if __name__ == "__main__":
     menu_principal()
