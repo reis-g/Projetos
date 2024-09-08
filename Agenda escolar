@@ -76,6 +76,45 @@ def adicionar_usuario(cpf, nome, senha, tipo):
     cursor.execute('INSERT INTO usuarios (cpf, nome, senha, tipo) VALUES (?, ?, ?, ?)', (cpf, nome, senha, tipo))
     conn.commit()
     conn.close()
+def adicionar_usuarios_de_teste():
+    conn = conectar()
+    cursor = conn.cursor()
+
+    # Exemplo de cadastro de uma turma
+    cursor.execute('INSERT INTO turmas (nome) VALUES (?)', ('Turma 1',))
+    cursor.execute('SELECT id FROM turmas WHERE nome = ?', ('Turma 1',))
+    turma_id = cursor.fetchone()[0]
+
+    # Função auxiliar para verificar e adicionar usuário
+    def adicionar_usuario_se_nao_existir(cpf, nome, senha, tipo, turma_id=None):
+        cursor.execute('SELECT cpf FROM usuarios WHERE cpf = ?', (cpf,))
+        if cursor.fetchone() is None:
+            cursor.execute('INSERT INTO usuarios (cpf, nome, senha, tipo) VALUES (?, ?, ?, ?)',
+                           (cpf, nome, senha, tipo))
+
+    # Exemplo de cadastro de professor
+    adicionar_usuario_se_nao_existir('11111111111', 'Professor Teste', 'senha123', 'professores', turma_id)
+
+    # Exemplo de cadastro de pais
+    adicionar_usuario_se_nao_existir('22222222222', 'Pai Teste', 'senha123', 'pais')
+
+    # Exemplo de cadastro de direção
+    adicionar_usuario_se_nao_existir('33333333333', 'Diretor Teste', 'senha123', 'direcoes')
+
+    # Cadastro de um aluno vinculado ao pai e à turma
+    cursor.execute('INSERT INTO alunos (nome, turma_id) VALUES (?, ?)', ('Aluno Teste', turma_id))
+    cursor.execute('SELECT id FROM alunos WHERE nome = ?', ('Aluno Teste',))
+    aluno_id = cursor.fetchone()[0]
+
+    # Garantir que o pai está vinculado ao aluno na tabela pais_alunos
+    cursor.execute('SELECT * FROM pais_alunos WHERE cpf_pais = ? AND aluno_id = ?', ('22222222222', aluno_id))
+    if cursor.fetchone() is None:
+        cursor.execute('INSERT INTO pais_alunos (cpf_pais, aluno_id) VALUES (?, ?)', ('22222222222', aluno_id))
+
+    conn.commit()
+    conn.close()
+
+    print("Usuários de teste cadastrados com sucesso!")
 
 # Função para autenticar usuário
 def formatar_cpf(cpf):
