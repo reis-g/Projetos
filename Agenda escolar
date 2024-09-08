@@ -76,6 +76,8 @@ def adicionar_usuario(cpf, nome, senha, tipo):
     cursor.execute('INSERT INTO usuarios (cpf, nome, senha, tipo) VALUES (?, ?, ?, ?)', (cpf, nome, senha, tipo))
     conn.commit()
     conn.close()
+
+
 def adicionar_usuarios_de_teste():
     conn = conectar()
     cursor = conn.cursor()
@@ -86,14 +88,13 @@ def adicionar_usuarios_de_teste():
     turma_id = cursor.fetchone()[0]
 
     # Função auxiliar para verificar e adicionar usuário
-    def adicionar_usuario_se_nao_existir(cpf, nome, senha, tipo, turma_id=None):
+    def adicionar_usuario_se_nao_existir(cpf, nome, senha, tipo):
         cursor.execute('SELECT cpf FROM usuarios WHERE cpf = ?', (cpf,))
         if cursor.fetchone() is None:
-            cursor.execute('INSERT INTO usuarios (cpf, nome, senha, tipo) VALUES (?, ?, ?, ?)',
-                           (cpf, nome, senha, tipo))
+            cursor.execute('INSERT INTO usuarios (cpf, nome, senha, tipo) VALUES (?, ?, ?, ?)', (cpf, nome, senha, tipo))
 
     # Exemplo de cadastro de professor
-    adicionar_usuario_se_nao_existir('11111111111', 'Professor Teste', 'senha123', 'professores', turma_id)
+    adicionar_usuario_se_nao_existir('11111111111', 'Professor Teste', 'senha123', 'professores')
 
     # Exemplo de cadastro de pais
     adicionar_usuario_se_nao_existir('22222222222', 'Pai Teste', 'senha123', 'pais')
@@ -101,20 +102,11 @@ def adicionar_usuarios_de_teste():
     # Exemplo de cadastro de direção
     adicionar_usuario_se_nao_existir('33333333333', 'Diretor Teste', 'senha123', 'direcoes')
 
-    # Cadastro de um aluno vinculado ao pai e à turma
-    cursor.execute('INSERT INTO alunos (nome, turma_id) VALUES (?, ?)', ('Aluno Teste', turma_id))
-    cursor.execute('SELECT id FROM alunos WHERE nome = ?', ('Aluno Teste',))
-    aluno_id = cursor.fetchone()[0]
-
-    # Garantir que o pai está vinculado ao aluno na tabela pais_alunos
-    cursor.execute('SELECT * FROM pais_alunos WHERE cpf_pais = ? AND aluno_id = ?', ('22222222222', aluno_id))
-    if cursor.fetchone() is None:
-        cursor.execute('INSERT INTO pais_alunos (cpf_pais, aluno_id) VALUES (?, ?)', ('22222222222', aluno_id))
-
     conn.commit()
     conn.close()
 
     print("Usuários de teste cadastrados com sucesso!")
+
 
 # Função para autenticar usuário
 def formatar_cpf(cpf):
@@ -132,20 +124,33 @@ def autenticar_usuario(root):
         if cpf:
             cpf = formatar_cpf(cpf)
             senha = simpledialog.askstring("Login", f"CPF: {cpf}\nDigite sua senha:", show='*', parent=root)
+            
+            # Remover formatação do CPF (pontos e traço) para comparação
+            cpf_formatado = cpf.replace('.', '').replace('-', '')
+            
             conn = conectar()
             cursor = conn.cursor()
-            cursor.execute('SELECT * FROM usuarios WHERE cpf = ? AND senha = ?', (cpf.replace('.', '').replace('-', ''), senha))
-            usuario = cursor.fetchone()
+            
+            # Verifica se o usuário existe e pega a senha
+            cursor.execute('SELECT senha FROM usuarios WHERE cpf = ?', (cpf_formatado,))
+            resultado = cursor.fetchone()
             conn.close()
-
-            if usuario:
-                messagebox.showinfo("Login", f"Bem-vindo, {usuario[1]}!", parent=root)
-                return usuario[3], {'cpf': usuario[0], 'nome': usuario[1], 'senha': usuario[2]}
+            
+            if resultado:
+                senha_armazenada = resultado[0]  # Senha armazenada no banco de dados
+                
+                # Verifica se a senha está correta
+                if senha == senha_armazenada:
+                    messagebox.showinfo("Login", f"Bem-vindo, {cpf_formatado}!", parent=root)
+                    return True
+                else:
+                    messagebox.showerror("Erro", "Senha incorreta. Tente novamente.", parent=root)
             else:
-                messagebox.showerror("Erro", "Senha incorreta. Tente novamente.", parent=root)
+                messagebox.showerror("Erro", "Usuário não encontrado.", parent=root)
         else:
             messagebox.showerror("Erro", "CPF inválido.", parent=root)
             return None, None
+
 
 # Função para sair
 def voltar_para_login(root):
