@@ -195,42 +195,42 @@ class Professor(Usuario):
 
         alunos_nomes = [aluno[1] for aluno in alunos]
 
-    def consultar_callback():
-        aluno_selecionado = aluno_var.get()  # Obtém o nome do aluno selecionado
-        conn = conectar()
-        cursor = conn.cursor()
-    
-        # Buscar o ID do aluno pelo nome
-        cursor.execute('SELECT id FROM alunos WHERE nome = ?', (aluno_selecionado,))
-        aluno = cursor.fetchone()
-    
-        if aluno:
-            aluno_id = aluno[0]  # Pega o ID do aluno
+def consultar_callback():
+    aluno_selecionado = aluno_var.get()  # Obtém o nome do aluno selecionado
+    conn = conectar()
+    cursor = conn.cursor()
 
-            # Buscar os registros diários do aluno
-            cursor.execute('SELECT * FROM registros_diarios WHERE aluno_id = ?', (aluno_id,))
-            registros = cursor.fetchall()  # Busca todos os registros
-            conn.close()
+    # Buscar o ID do aluno pelo nome
+    cursor.execute('SELECT id FROM alunos WHERE nome = ?', (aluno_selecionado,))
+    aluno = cursor.fetchone()
 
-            if registros:
-                # Exibe os registros em uma nova janela
-                janela_registros = tk.Toplevel()
-                janela_registros.title(f"Registros de {aluno_selecionado}")
+    if aluno:  # Verifica se o aluno foi encontrado
+        aluno_id = aluno[0]  # Pega o ID do aluno
 
-                for reg in registros:
-                    registro_str = f"Data: {reg[2]}\nBrincou: {'Sim' if reg[3] else 'Não'}\n" \
-                                   f"Fez xixi: {'Sim' if reg[4] else 'Não'}\n" \
-                                   f"Fez cocô: {'Sim' if reg[5] else 'Não'}\n" \
-                                   f"Comeu lanche: {'Sim' if reg[6] else 'Não'}\n" \
-                                   f"Almoço: {'Sim' if reg[7] else 'Não'}\n" \
-                                   f"Janta: {'Sim' if reg[8] else 'Não'}\n" \
-                                   f"Mensagem: {reg[9]}\n"
+        # Buscar os registros diários do aluno
+        cursor.execute('SELECT * FROM registros_diarios WHERE aluno_id = ?', (aluno_id,))
+        registros = cursor.fetchall()  # Busca todos os registros
+        conn.close()
+
+        if registros:
+            # Exibe os registros em uma nova janela
+            janela_registros = tk.Toplevel()
+            janela_registros.title(f"Registros de {aluno_selecionado}")
+
+            for reg in registros:
+                registro_str = f"Data: {reg[2]}\nBrincou: {'Sim' if reg[3] else 'Não'}\n" \
+                               f"Fez xixi: {'Sim' if reg[4] else 'Não'}\n" \
+                               f"Fez cocô: {'Sim' if reg[5] else 'Não'}\n" \
+                               f"Comeu lanche: {'Sim' if reg[6] else 'Não'}\n" \
+                               f"Almoço: {'Sim' if reg[7] else 'Não'}\n" \
+                               f"Janta: {'Sim' if reg[8] else 'Não'}\n" \
+                               f"Mensagem: {reg[9]}\n"
                 
-                    tk.Label(janela_registros, text=registro_str).pack(pady=5)
-            else:
-                messagebox.showinfo("Consulta", "Nenhum registro encontrado para este aluno.")
+                tk.Label(janela_registros, text=registro_str).pack(pady=5)
         else:
-            messagebox.showerror("Erro", "Aluno não encontrado.")
+            messagebox.showinfo("Consulta", "Nenhum registro encontrado para este aluno.")
+    else:
+        messagebox.showerror("Erro", "Aluno não encontrado.")
 
             
 class Pais(Usuario):
@@ -260,44 +260,42 @@ class Pais(Usuario):
 
         alunos_nomes = [aluno[1] for aluno in alunos]
 
+def consultar_callback():
+    aluno_selecionado = aluno_var.get()  # Obtém o nome do aluno selecionado
+    conn = conectar()
+    cursor = conn.cursor()
 
-   
-    def consultar_callback():
-        aluno_selecionado = aluno_var.get()  # Obtém o nome do aluno selecionado
-        conn = conectar()
-        cursor = conn.cursor()
-    
-        # Buscar o ID do aluno pelo nome
-        cursor.execute('SELECT id FROM alunos WHERE nome = ?', (aluno_selecionado,))
-        aluno = cursor.fetchone()
-    
-        if aluno:
-            aluno_id = aluno[0]  # Pega o ID do aluno
+    # Buscar o ID do aluno pelo nome
+    cursor.execute('SELECT id FROM alunos WHERE nome = ?', (aluno_selecionado,))
+    aluno = cursor.fetchone()
 
-            # Buscar os registros diários do aluno
-            cursor.execute('SELECT * FROM registros_diarios WHERE aluno_id = ?', (aluno_id,))
-            registros = cursor.fetchall()  # Busca todos os registros
-            conn.close()
+    if aluno:  # Verifica se o aluno foi encontrado
+        aluno_id = aluno[0]  # Pega o ID do aluno
 
-            if registros:
-                # Exibe os registros em uma nova janela
-                janela_registros = tk.Toplevel()
-                janela_registros.title(f"Registros de {aluno_selecionado}")
+        # Buscar os registros diários do aluno
+        cursor.execute('SELECT * FROM registros_diarios WHERE aluno_id = ?', (aluno_id,))
+        registros = cursor.fetchall()  # Busca todos os registros
+        conn.close()
 
-                for reg in registros:
-                    registro_str = f"Data: {reg[2]}\nBrincou: {'Sim' if reg[3] else 'Não'}\n" \
-                                   f"Fez xixi: {'Sim' if reg[4] else 'Não'}\n" \
-                                   f"Fez cocô: {'Sim' if reg[5] else 'Não'}\n" \
-                                   f"Comeu lanche: {'Sim' if reg[6] else 'Não'}\n" \
-                                   f"Almoço: {'Sim' if reg[7] else 'Não'}\n" \
-                                   f"Janta: {'Sim' if reg[8] else 'Não'}\n" \
-                                   f"Mensagem: {reg[9]}\n"
+        if registros:
+            # Exibe os registros em uma nova janela
+            janela_registros = tk.Toplevel()
+            janela_registros.title(f"Registros de {aluno_selecionado}")
+
+            for reg in registros:
+                registro_str = f"Data: {reg[2]}\nBrincou: {'Sim' if reg[3] else 'Não'}\n" \
+                               f"Fez xixi: {'Sim' if reg[4] else 'Não'}\n" \
+                               f"Fez cocô: {'Sim' if reg[5] else 'Não'}\n" \
+                               f"Comeu lanche: {'Sim' if reg[6] else 'Não'}\n" \
+                               f"Almoço: {'Sim' if reg[7] else 'Não'}\n" \
+                               f"Janta: {'Sim' if reg[8] else 'Não'}\n" \
+                               f"Mensagem: {reg[9]}\n"
                 
-                    tk.Label(janela_registros, text=registro_str).pack(pady=5)
-            else:
-                messagebox.showinfo("Consulta", "Nenhum registro encontrado para este aluno.")
+                tk.Label(janela_registros, text=registro_str).pack(pady=5)
         else:
-            messagebox.showerror("Erro", "Aluno não encontrado.")
+            messagebox.showinfo("Consulta", "Nenhum registro encontrado para este aluno.")
+    else:
+        messagebox.showerror("Erro", "Aluno não encontrado.")
 
 class Direcao(Usuario):
     def __init__(self, cpf, nome, senha):
