@@ -196,62 +196,43 @@ class Professor(Usuario):
         alunos_nomes = [aluno[1] for aluno in alunos]
 
     def consultar_callback():
-        aluno_selecionado = aluno_var.get()
+        aluno_selecionado = aluno_var.get()  # Obtém o nome do aluno selecionado
         conn = conectar()
         cursor = conn.cursor()
+    
+        # Buscar o ID do aluno pelo nome
         cursor.execute('SELECT id FROM alunos WHERE nome = ?', (aluno_selecionado,))
-        aluno_id = cursor.fetchone()[0]
+        aluno = cursor.fetchone()
+    
+    if aluno:
+        aluno_id = aluno[0]  # Pega o ID do aluno
+
+        # Buscar os registros diários do aluno
         cursor.execute('SELECT * FROM registros_diarios WHERE aluno_id = ?', (aluno_id,))
-        registros = cursor.fetchall()
+        registros = cursor.fetchall()  # Busca todos os registros
         conn.close()
 
-    if registros:
-        janela_registros = tk.Toplevel()
-        janela_registros.title(f"Registros de {aluno_selecionado}")
+        if registros:
+            # Exibe os registros em uma nova janela
+            janela_registros = tk.Toplevel()
+            janela_registros.title(f"Registros de {aluno_selecionado}")
 
-        for reg in registros:
-            registro_str = f"Data: {reg[2]}\nBrincou: {'Sim' if reg[3] else 'Não'}\nFez xixi: {'Sim' if reg[4] else 'Não'}" \
-                           f"\nFez cocô: {'Sim' if reg[5] else 'Não'}\nComeu lanche: {'Sim' if reg[6] else 'Não'}" \
-                           f"\nAlmoço: {'Sim' if reg[7] else 'Não'}\nJanta: {'Sim' if reg[8] else 'Não'}\nMensagem: {reg[9]}\n"
-            tk.Label(janela_registros, text=registro_str).pack(pady=5)
+            for reg in registros:
+                registro_str = f"Data: {reg[2]}\nBrincou: {'Sim' if reg[3] else 'Não'}\n" \
+                               f"Fez xixi: {'Sim' if reg[4] else 'Não'}\n" \
+                               f"Fez cocô: {'Sim' if reg[5] else 'Não'}\n" \
+                               f"Comeu lanche: {'Sim' if reg[6] else 'Não'}\n" \
+                               f"Almoço: {'Sim' if reg[7] else 'Não'}\n" \
+                               f"Janta: {'Sim' if reg[8] else 'Não'}\n" \
+                               f"Mensagem: {reg[9]}\n"
+                
+                tk.Label(janela_registros, text=registro_str).pack(pady=5)
+        else:
+            messagebox.showinfo("Consulta", "Nenhum registro encontrado para este aluno.")
     else:
-        messagebox.showinfo("Consulta", "Nenhum registro encontrado.")
+        messagebox.showerror("Erro", "Aluno não encontrado.")
 
-
-            if aluno_id is not None:
-                conn = conectar()
-                cursor = conn.cursor()
-                cursor.execute('SELECT * FROM registros_diarios WHERE aluno_id = ?', (aluno_id,))
-                registros = cursor.fetchall()
-                conn.close()
-
-                if registros:
-                    registros_str = "\n".join([
-                        f"Data: {reg[2]}, Brincou: {bool(reg[3])}, Fez xixi: {bool(reg[4])}, Fez cocô: {bool(reg[5])}, "
-                        f"Comeu lanche: {bool(reg[6])}, Almoço: {bool(reg[7])}, Janta: {bool(reg[8])}, Mensagem: {reg[9]}"
-                        for reg in registros
-                    ])
-                    messagebox.showinfo(f"Registros de {aluno_selecionado}", registros_str)
-                else:
-                    messagebox.showinfo("Consulta", "Nenhum registro encontrado.")
-            else:
-                messagebox.showerror("Erro", "Aluno não encontrado.")
-            janela_selecao.destroy()
-
-        janela_selecao = tk.Toplevel()
-        janela_selecao.title("Selecionar Aluno")
-
-        ttk.Label(janela_selecao, text="Escolha um aluno para consultar os registros:").pack(pady=10)
-        
-        aluno_var = tk.StringVar(janela_selecao)
-        aluno_var.set(alunos_nomes[0])
-
-        dropdown = ttk.OptionMenu(janela_selecao, aluno_var, *alunos_nomes)
-        dropdown.pack(pady=10)
-
-        btn_selecionar = ttk.Button(janela_selecao, text="Selecionar", command=consultar_callback)
-        btn_selecionar.pack(pady=10)
-
+            
 class Pais(Usuario):
     def __init__(self, cpf, nome, senha, alunos_ids):
         super().__init__(cpf, nome, senha)
@@ -280,49 +261,43 @@ class Pais(Usuario):
         alunos_nomes = [aluno[1] for aluno in alunos]
 
 
+   
     def consultar_callback():
-        aluno_selecionado = aluno_var.get()
+        aluno_selecionado = aluno_var.get()  # Obtém o nome do aluno selecionado
         conn = conectar()
         cursor = conn.cursor()
+    
+        # Buscar o ID do aluno pelo nome
         cursor.execute('SELECT id FROM alunos WHERE nome = ?', (aluno_selecionado,))
-        aluno_id = cursor.fetchone()[0]
+        aluno = cursor.fetchone()
+    
+    if aluno:
+        aluno_id = aluno[0]  # Pega o ID do aluno
+
+        # Buscar os registros diários do aluno
         cursor.execute('SELECT * FROM registros_diarios WHERE aluno_id = ?', (aluno_id,))
-        registros = cursor.fetchall()
+        registros = cursor.fetchall()  # Busca todos os registros
         conn.close()
 
-            if aluno_id is not None:
-                conn = conectar()
-                cursor = conn.cursor()
-                cursor.execute('SELECT * FROM registros_diarios WHERE aluno_id = ?', (aluno_id,))
-                registros = cursor.fetchall()
-                conn.close()
+        if registros:
+            # Exibe os registros em uma nova janela
+            janela_registros = tk.Toplevel()
+            janela_registros.title(f"Registros de {aluno_selecionado}")
 
-                if registros:
-                    registros_str = "\n".join([
-                        f"Data: {reg[2]}, Brincou: {bool(reg[3])}, Fez xixi: {bool(reg[4])}, Fez cocô: {bool(reg[5])}, "
-                        f"Comeu lanche: {bool(reg[6])}, Almoço: {bool(reg[7])}, Janta: {bool(reg[8])}, Mensagem: {reg[9]}"
-                        for reg in registros
-                    ])
-                    messagebox.showinfo(f"Registros de {aluno_selecionado}", registros_str)
-                else:
-                    messagebox.showinfo("Consulta", "Nenhum registro encontrado.")
-            else:
-                messagebox.showerror("Erro", "Aluno não encontrado.")
-            janela_selecao.destroy()
-
-        janela_selecao = tk.Toplevel()
-        janela_selecao.title("Selecionar Aluno")
-
-        ttk.Label(janela_selecao, text="Escolha um aluno para consultar os registros:").pack(pady=10)
-
-        aluno_var = tk.StringVar(janela_selecao)
-        aluno_var.set(alunos_nomes[0])
-
-        dropdown = ttk.OptionMenu(janela_selecao, aluno_var, *alunos_nomes)
-        dropdown.pack(pady=10)
-
-        btn_selecionar = ttk.Button(janela_selecao, text="Selecionar", command=consultar_callback)
-        btn_selecionar.pack(pady=10)
+            for reg in registros:
+                registro_str = f"Data: {reg[2]}\nBrincou: {'Sim' if reg[3] else 'Não'}\n" \
+                               f"Fez xixi: {'Sim' if reg[4] else 'Não'}\n" \
+                               f"Fez cocô: {'Sim' if reg[5] else 'Não'}\n" \
+                               f"Comeu lanche: {'Sim' if reg[6] else 'Não'}\n" \
+                               f"Almoço: {'Sim' if reg[7] else 'Não'}\n" \
+                               f"Janta: {'Sim' if reg[8] else 'Não'}\n" \
+                               f"Mensagem: {reg[9]}\n"
+                
+                tk.Label(janela_registros, text=registro_str).pack(pady=5)
+        else:
+            messagebox.showinfo("Consulta", "Nenhum registro encontrado para este aluno.")
+    else:
+        messagebox.showerror("Erro", "Aluno não encontrado.")
 
 class Direcao(Usuario):
     def __init__(self, cpf, nome, senha):
