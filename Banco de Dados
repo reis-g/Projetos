@@ -1,0 +1,72 @@
+-- Criação da tabela de USUÁRIO
+CREATE TABLE USUARIO (
+    Matricula INT PRIMARY KEY,
+    Nome VARCHAR(100),
+    Endereco VARCHAR(150),
+    Telefone VARCHAR(15)
+);
+
+-- Criação da tabela de EMPRÉSTIMO
+CREATE TABLE EMPRESTIMO (
+    CodigoEmprestimo INT PRIMARY KEY AUTO_INCREMENT,
+    DataEmprestimo DATE,
+    DataDevolucao DATE,
+    MatriculaUsuario INT,
+    CONSTRAINT FK_UsuarioEmprestimo FOREIGN KEY (MatriculaUsuario) REFERENCES USUARIO(Matricula)
+);
+
+-- Criação da tabela de LIVRO
+CREATE TABLE LIVRO (
+    CodigoLivro INT PRIMARY KEY AUTO_INCREMENT,
+    Titulo VARCHAR(150),
+    Autor VARCHAR(100),
+    DataPublicacao YEAR,
+    Disponibilidade BOOLEAN,
+    CodigoSessao INT,
+    CONSTRAINT FK_LivroSessao FOREIGN KEY (CodigoSessao) REFERENCES SESSAO(CodigoSessao)
+);
+
+-- Criação da tabela de SESSÃO
+CREATE TABLE SESSAO (
+    CodigoSessao INT PRIMARY KEY AUTO_INCREMENT,
+    Localizacao VARCHAR(50)
+);
+
+-- Criação da tabela de associação entre LIVRO e EMPRÉSTIMO
+CREATE TABLE LIVRO_EMPRESTIMO (
+    CodigoLivro INT,
+    CodigoEmprestimo INT,
+    PRIMARY KEY (CodigoLivro, CodigoEmprestimo),
+    CONSTRAINT FK_Livro FOREIGN KEY (CodigoLivro) REFERENCES LIVRO(CodigoLivro),
+    CONSTRAINT FK_Emprestimo FOREIGN KEY (CodigoEmprestimo) REFERENCES EMPRESTIMO(CodigoEmprestimo)
+);
+
+-- Consultas para visualizar informações do sistema
+
+-- 1. Consulta para visualizar todos os empréstimos efetuados por um usuário
+SELECT U.Nome, E.CodigoEmprestimo, E.DataEmprestimo, E.DataDevolucao
+FROM USUARIO U
+JOIN EMPRESTIMO E ON U.Matricula = E.MatriculaUsuario
+WHERE U.Matricula = ?;
+
+-- 2. Consulta para verificar disponibilidade de livros
+SELECT L.Titulo, L.Autor, L.Disponibilidade, S.Localizacao
+FROM LIVRO L
+JOIN SESSAO S ON L.CodigoSessao = S.CodigoSessao
+WHERE L.Disponibilidade = TRUE;
+
+-- 3. Consulta para listar todos os livros emprestados por um usuário específico
+SELECT L.Titulo, L.Autor, E.DataEmprestimo, E.DataDevolucao
+FROM USUARIO U
+JOIN EMPRESTIMO E ON U.Matricula = E.MatriculaUsuario
+JOIN LIVRO_EMPRESTIMO LE ON E.CodigoEmprestimo = LE.CodigoEmprestimo
+JOIN LIVRO L ON LE.CodigoLivro = L.CodigoLivro
+WHERE U.Matricula = ?;
+
+-- 4. Consulta para visualizar o histórico de empréstimos de um livro específico
+SELECT L.Titulo, U.Nome, E.DataEmprestimo, E.DataDevolucao
+FROM LIVRO L
+JOIN LIVRO_EMPRESTIMO LE ON L.CodigoLivro = LE.CodigoLivro
+JOIN EMPRESTIMO E ON LE.CodigoEmprestimo = E.CodigoEmprestimo
+JOIN USUARIO U ON E.MatriculaUsuario = U.Matricula
+WHERE L.CodigoLivro = ?;
