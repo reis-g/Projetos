@@ -12,13 +12,44 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Button } from 'react-native-paper';
 
 const firebaseConfig = {
-  apiKey: 'SUA_API_KEY',
-  authDomain: 'SEU_DOMINIO.firebaseapp.com',
-  projectId: 'SEU_PROJECT_ID',
-  storageBucket: 'SEU_BUCKET.appspot.com',
-  messagingSenderId: 'SENDER_ID',
-  appId: 'APP_ID'
-};
+    "project_info": {
+      "project_number": "1012928568255",
+      "project_id": "hitorinhasapp",
+      "storage_bucket": "hitorinhasapp.firebasestorage.app"
+    },
+    "client": [
+      {
+        "client_info": {
+          "mobilesdk_app_id": "1:1012928568255:android:d4de49f797f1ca9dcf9f0a",
+          "android_client_info": {
+            "package_name": "com.reis.apphistorias"
+          }
+        },
+        "oauth_client": [
+          {
+            "client_id": "1012928568255-n4l1fsdt04ihog520anls1oudki41mjc.apps.googleusercontent.com",
+            "client_type": 3
+          }
+        ],
+        "api_key": [
+          {
+            "current_key": "AIzaSyDTQQSBYHF5Qdz-czJiHWoFvTH7TA66kCM"
+          }
+        ],
+        "services": {
+          "appinvite_service": {
+            "other_platform_oauth_client": [
+              {
+                "client_id": "1012928568255-n4l1fsdt04ihog520anls1oudki41mjc.apps.googleusercontent.com",
+                "client_type": 3
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "configuration_version": "1"
+  }
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
