@@ -1,0 +1,137 @@
+// Instale as dependências necessárias antes:
+// npm install firebase expo-av react-navigation react-native-paper
+// Este exemplo usa Firebase (Firestore) e Cloudinary
+
+import React, { useEffect, useState } from 'react';
+import { ScrollView, Image, Text, View, StyleSheet, TouchableOpacity } from 'react-native';
+import { Audio } from 'expo-av';
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, getDocs } from 'firebase/firestore';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { Button } from 'react-native-paper';
+
+const firebaseConfig = {
+  apiKey: 'SUA_API_KEY',
+  authDomain: 'SEU_DOMINIO.firebaseapp.com',
+  projectId: 'SEU_PROJECT_ID',
+  storageBucket: 'SEU_BUCKET.appspot.com',
+  messagingSenderId: 'SENDER_ID',
+  appId: 'APP_ID'
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const Stack = createNativeStackNavigator();
+
+function CatalogScreen({ navigation }) {
+  const [historias, setHistorias] = useState([]);
+
+  useEffect(() => {
+    async function carregarHistorias() {
+      const querySnapshot = await getDocs(collection(db, 'historias'));
+      const dados = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setHistorias(dados);
+    }
+    carregarHistorias();
+  }, []);
+
+  return (
+    <ScrollView contentContainerStyle={styles.catalogoContainer}>
+      {historias.map(historia => (
+        <TouchableOpacity key={historia.id} style={styles.card} onPress={() => navigation.navigate('História', { historia })}>
+          <Image source={{ uri: historia.imagemURL }} style={styles.miniatura} />
+          <Text style={styles.titulo}>{historia.titulo}</Text>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
+  );
+}
+
+function HistoriaScreen({ route }) {
+  const { historia } = route.params;
+  const [sound, setSound] = useState();
+
+  async function tocarAudio() {
+    if (sound) {
+      await sound.replayAsync();
+    } else {
+      const { sound: novoSom } = await Audio.Sound.createAsync({ uri: historia.audioURL });
+      setSound(novoSom);
+      await novoSom.playAsync();
+    }
+  }
+
+  useEffect(() => {
+    return sound ? () => sound.unloadAsync() : undefined;
+  }, [sound]);
+
+  return (
+    <View style={styles.historiaContainer}>
+      <Image source={{ uri: historia.imagemURL }} style={styles.imagemGrande} />
+      <ScrollView style={styles.textoContainer}>
+        <Text style={styles.texto}>{historia.texto}</Text>
+      </ScrollView>
+      <Button icon="volume-high" mode="contained" onPress={tocarAudio}>
+        Ouvir história
+      </Button>
+    </View>
+  );
+}
+
+export default function App() {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator>
+        <Stack.Screen name="Catálogo" component={CatalogScreen} />
+        <Stack.Screen name="História" component={HistoriaScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
+
+const styles = StyleSheet.create({
+  catalogoContainer: {
+    padding: 10,
+    flexDirection: 'column',
+    alignItems: 'center'
+  },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
+    marginBottom: 10,
+    padding: 10,
+    borderRadius: 10,
+    width: '95%'
+  },
+  miniatura: {
+    width: 80,
+    height: 80,
+    marginRight: 10,
+    borderRadius: 8
+  },
+  titulo: {
+    fontSize: 18,
+    fontWeight: 'bold'
+  },
+  historiaContainer: {
+    flex: 1,
+    padding: 10
+  },
+  imagemGrande: {
+    width: '100%',
+    height: 200,
+    resizeMode: 'cover',
+    marginBottom: 10,
+    borderRadius: 10
+  },
+  textoContainer: {
+    flex: 1,
+    marginBottom: 10
+  },
+  texto: {
+    fontSize: 16
+  }
+});
